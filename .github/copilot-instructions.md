@@ -1,5 +1,46 @@
 # Copilot Instructions
 
+## Self-Improvement
+
+This repo uses a self-improving loop. After each session, log discoveries so future sessions are smarter.
+
+### When to log
+
+| Situation | File |
+|-----------|------|
+| Command or operation fails unexpectedly | `.learnings/ERRORS.md` |
+| You correct yourself or get corrected | `.learnings/LEARNINGS.md` (category: `correction`) |
+| Found a better approach | `.learnings/LEARNINGS.md` (category: `best_practice`) |
+| Knowledge was wrong or outdated | `.learnings/LEARNINGS.md` (category: `knowledge_gap`) |
+| User wants something that doesn't exist yet | `.learnings/FEATURE_REQUESTS.md` |
+
+### Entry format
+
+```markdown
+## [LRN-YYYYMMDD-XXX] category
+
+**Logged**: 2026-03-01T18:00:00Z
+**Priority**: low | medium | high | critical
+**Status**: pending
+**Area**: pipeline | tts | rss | narration | ci | config
+
+### Summary
+One-line description
+
+### Details
+What happened, what was wrong, what's correct
+
+### Suggested Action
+Specific fix or improvement
+```
+
+Use `LRN-`, `ERR-`, or `FEAT-` prefix. Date + 3-char suffix (e.g. `LRN-20260301-A1B`).
+
+### Promoting to instructions
+
+High-value learnings auto-promote to this file via the **🧠 Self-Improve** GitHub Actions workflow.  
+Trigger it from the Actions tab (or it runs automatically when `.learnings/` files change).
+
 ## Project Overview
 
 **Weekly Developer Radar Podcast** — a Python pipeline that discovers fast-rising open-source repositories weekly, generates a written briefing, converts it to a narration script, synthesizes audio via TTS, and publishes episodes to an RSS feed with GitHub Release-hosted MP3s.
@@ -16,7 +57,7 @@ The pipeline runs as `python -m pipeline.main` and is orchestrated by `.github/w
 |------|------|
 | `main.py` | Top-level orchestrator; reads mode flags and runs pipeline stages in order |
 | `narrate.py` | Converts `README.md` (markdown briefing) into a spoken narration script |
-| `tts.py` | Text-to-speech synthesis; primary: `edge-tts`, fallback: OpenAI TTS via `GITHUB_TOKEN` |
+| `tts.py` | Text-to-speech synthesis; primary: `edge-tts` (free, no auth), fallback: OpenAI TTS via GitHub Models using `GITHUB_TOKEN` (no paid key needed) |
 | `podcast.py` | Writes deduped RSS 2.0 + iTunes updates to `podcast.xml` |
 | `update-radar.yml` | GitHub Actions workflow; commits artifacts and creates/updates dated GitHub Release |
 
@@ -58,8 +99,22 @@ Deduplication is by `guid` — never insert a duplicate.
 ### Episode Duration Target
 Audio runtime target is **60 ± 5 minutes**. Script length heuristics may be used during generation, but the pipeline's pass/fail check uses actual audio runtime.
 
-### TTS Fallback
-`tts.py` must automatically attempt the OpenAI TTS fallback (via `GITHUB_TOKEN` → GitHub Models) if `edge-tts` fails. The fallback is not manual — it happens in the same run.
+### TTS — No Paid Key Required
+Both TTS providers require zero paid credentials:
+
+- **Primary: `edge-tts`** — free, no auth, runs locally via the `edge-tts` Python package.
+- **Fallback: OpenAI TTS via GitHub Models** — uses the auto-injected `GITHUB_TOKEN` from GitHub Actions. No OpenAI account or billing required. Endpoint: `https://models.inference.ai.azure.com`, OpenAI-compatible SDK.
+
+```python
+from openai import OpenAI
+client = OpenAI(
+    base_url="https://models.inference.ai.azure.com",
+    api_key=os.environ["GITHUB_TOKEN"],
+)
+response = client.audio.speech.create(model="tts-1-hd", voice="alloy", input=script)
+```
+
+`tts.py` must automatically attempt the fallback if `edge-tts` fails. Never require a separately managed API key.
 
 ### Dry-Run Placeholder URLs
 Dry-run must still write a valid episode to `podcast.xml` with a deterministic, clearly-marked non-production placeholder URL. Real TTS is not called.
