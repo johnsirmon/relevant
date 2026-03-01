@@ -113,7 +113,7 @@ The pipeline runs as `python -m pipeline.main` and is orchestrated by `.github/w
 1. `discover` — search GitHub by topic, score candidates, select top 5
 2. `research` — fetch commits/PRs/releases per repo, summarise with GPT-4o
 3. `briefing` — write `README.md`
-4. `narrate` — convert `README.md` to spoken script
+4. `editorial` — GPT-4o synthesises all 5 results into a cohesive podcast script (falls back to `narrate` in `--podcast-only` mode; toggle: `episode.editorial_enabled` in `config.yaml`)
 5. `tts` — synthesise `radar.mp3`
 6. **publish release** — `gh release create/upload`, capture final URL + size
 7. `feed` — prepend deduped episode to `podcast.xml`
@@ -164,6 +164,9 @@ Both TTS providers chunk the script at `_CHUNK_SIZE = 4800` chars on paragraph b
 - No `render_children()` — use `self.render_tokens(token.get('children', []), state)` instead
 - `block_text` token type wraps inline content inside list items — must be handled explicitly
 - Use `token.get('raw', '')` defensively
+
+### Editorial Narrative (AI-powered)
+`pipeline/editorial.py` makes a **single GPT-4o call** with all `ResearchResult` objects to produce a cohesive spoken script. It runs after `research` in full pipeline mode and replaces `narrate`. Disable with `episode.editorial_enabled: false` in `config.yaml`. Falls back to `narrate` automatically in `--podcast-only` mode.
 
 ### TTS — No Paid Key Required
 Both providers are free with no auth:

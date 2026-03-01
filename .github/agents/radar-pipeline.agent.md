@@ -5,13 +5,7 @@ description: >
   to debug, run, extend, or understand the pipeline; when asked about TTS, RSS feed, scoring,
   research caching, or any pipeline module; or when the word "radar" appears alongside a
   development task.
-tools:
-  - read_file
-  - write_file
-  - edit_file
-  - list_directory
-  - search_files
-  - run_terminal_command
+tools: []
 ---
 
 # Radar Pipeline Agent
@@ -96,18 +90,18 @@ RADAR_WEIGHTS__GROWTH=0.40 python -m pipeline.main --podcast
 Never hard-code scoring values in module code.
 
 ### GUID + idempotency
-GUID = `"radar-" + sha1(YYYY-MM-DD)[:12]`. Same date → same GUID.  
-Pipeline checks `podcast.xml` for today's GUID at startup and exits early if found.  
+GUID = `"radar-" + sha1(YYYY-MM-DD)[:12]`. Same date → same GUID.
+Pipeline checks `podcast.xml` for today's GUID at startup and exits early if found.
 Dry-run and full run share the same GUID — running dry-run first blocks the full run until `podcast.xml` is deleted.
 
 ### Research cache
-`.cache/research/<owner>__<repo>__<YYYY-WW>.json` — keyed by ISO week number.  
-Delete files where `YYYY-WW` doesn't match current week to force fresh data.  
+`.cache/research/<owner>__<repo>__<YYYY-WW>.json` — keyed by ISO week number.
+Delete files where `YYYY-WW` doesn't match current week to force fresh data.
 In CI: `actions/cache` preserves across re-runs within the same week.
 
 ### TTS chain
 1. `edge-tts` (free, `en-US-AriaNeural`, requires >=7.2.7 — 7.0.x returns 403)
-2. `gTTS` fallback (free, Google TTS, no auth)  
+2. `gTTS` fallback (free, Google TTS, no auth)
 GitHub Models does NOT expose TTS endpoints — only chat models. Do not attempt `openai.audio.speech`.
 
 ### mistune 3.x renderer notes

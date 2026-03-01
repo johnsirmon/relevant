@@ -40,6 +40,8 @@ thresholds:
 episode:
   target_duration_min: 55
   target_duration_max: 65
+  editorial_enabled: true
+  editorial_model: gpt-5.3-codex
 
 podcast:
   title: Weekly Developer Radar

@@ -23,11 +23,12 @@ from pathlib import Path
 from . import config
 from . import briefing as briefing_mod
 from . import discover as discover_mod
+from . import editorial as editorial_mod
 from . import feed as feed_mod
 from . import narrate as narrate_mod
 from . import research as research_mod
 from . import tts as tts_mod
-from .models import EpisodeRecord
+from .models import EpisodeRecord, ResearchResult
 
 logging.basicConfig(
     level=logging.INFO,
@@ -114,7 +115,7 @@ def run_full(args: argparse.Namespace) -> None:
     log.info("--- Stage 3: Briefing ---")
     briefing_mod.write_briefing(results)
 
-    _run_podcast_stages(args, guid)
+    _run_podcast_stages(args, guid, results)
 
 
 def run_podcast_only(args: argparse.Namespace) -> None:
@@ -127,12 +128,17 @@ def run_podcast_only(args: argparse.Namespace) -> None:
     _run_podcast_stages(args, guid)
 
 
-def _run_podcast_stages(args: argparse.Namespace, guid: str) -> None:
-    # 4. Narrate
-    log.info("--- Stage 4: Narrate ---")
-    script = narrate_mod.convert_file(Path("README.md"))
-
+def _run_podcast_stages(args: argparse.Namespace, guid: str, results: list[ResearchResult] | None = None) -> None:
+    # 4. Narrate / Editorial
     cfg = config.all_config()["episode"]
+    editorial_enabled = cfg.get("editorial_enabled", False)
+
+    if results and editorial_enabled:
+        log.info("--- Stage 4: Editorial (AI narrative) ---")
+        script = editorial_mod.generate_script(results)
+    else:
+        log.info("--- Stage 4: Narrate (mechanical renderer) ---")
+        script = narrate_mod.convert_file(Path("README.md"))
 
     # 5. TTS
     log.info("--- Stage 5: TTS ---")
