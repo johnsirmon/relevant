@@ -41,6 +41,19 @@ Use `LRN-`, `ERR-`, or `FEAT-` prefix. Date + 3-char suffix (e.g. `LRN-20260301-
 High-value learnings auto-promote to this file via the **🧠 Self-Improve** GitHub Actions workflow.  
 Trigger it from the Actions tab (or it runs automatically when `.learnings/` files change).
 
+## Commands
+
+```bash
+pip install -r requirements.txt
+
+python -m pipeline.main --podcast           # full pipeline
+python -m pipeline.main --podcast-only      # reuse existing README.md, skip discovery/research
+python -m pipeline.main --dry-run           # update feed with placeholder, skip TTS/upload
+python -m pipeline.main --podcast --auto-adjust-duration  # ffmpeg tempo-adjust if duration misses target
+
+PUBLISH_PODCAST=1 python -m pipeline.main   # env var equivalent of --podcast
+```
+
 ## Project Overview
 
 **Weekly Developer Radar Podcast** — a Python pipeline that discovers fast-rising open-source repositories weekly, generates a written briefing, converts it to a narration script, synthesizes audio via TTS, and publishes episodes to an RSS feed with GitHub Release-hosted MP3s.
