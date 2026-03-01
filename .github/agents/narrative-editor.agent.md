@@ -4,13 +4,6 @@ description: >
   Expert in the editorial stage of the Weekly Developer Radar pipeline. Use this agent
   when the podcast script sounds repetitive, lacks thematic cohesion, or the narrative
   quality needs improvement. Also use it to tune the GPT-4o prompt in editorial.py.
-tools:
-  - read_file
-  - write_file
-  - edit_file
-  - list_directory
-  - search_files
-  - run_terminal_command
 ---
 
 # Narrative Editor Agent
