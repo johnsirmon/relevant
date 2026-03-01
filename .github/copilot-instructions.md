@@ -79,7 +79,7 @@ The pipeline runs as `python -m pipeline.main` and is orchestrated by `.github/w
 | `pipeline/research.py` | Per-repo activity fetch + GPT-4o summarisation via GitHub Models; results cached to `.cache/research/` |
 | `pipeline/briefing.py` | Assembles `README.md` from `ResearchResult` list |
 | `pipeline/narrate.py` | mistune AST renderer — strips tables/TOC/links, injects consistent intro + outro |
-| `pipeline/tts.py` | edge-tts primary → OpenAI TTS fallback; mutagen duration check; optional ffmpeg tempo adjust |
+| `pipeline/tts.py` | edge-tts primary → gTTS fallback; mutagen duration check; optional ffmpeg tempo adjust |
 | `pipeline/feed.py` | RSS 2.0 + iTunes `podcast.xml` updates with guid-based dedup and XML validation |
 
 ### Core Artifacts
