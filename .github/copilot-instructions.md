@@ -54,6 +54,12 @@ python -m pipeline.main --podcast --auto-adjust-duration  # ffmpeg tempo-adjust 
 PUBLISH_PODCAST=1 python -m pipeline.main   # env var equivalent of --podcast
 ```
 
+> **Windows / ffmpeg PATH:** winget installs ffmpeg but doesn't update the current shell's PATH. Either open a new terminal after install, or prefix commands with:  
+> `$env:PATH = "C:\Users\<you>\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_*\bin;$env:PATH"`
+
+> **GITHUB_TOKEN:** Use `gh auth token` if GitHub CLI is already authenticated — no manual token management needed:  
+> `$env:GITHUB_TOKEN = (gh auth token)`
+
 ## Project Overview
 
 **Weekly Developer Radar Podcast** — a Python pipeline that discovers fast-rising open-source repositories weekly, generates a written briefing, converts it to a narration script, synthesizes audio via TTS, and publishes episodes to an RSS feed with GitHub Release-hosted MP3s.
@@ -136,9 +142,9 @@ Both TTS providers chunk the script at `_CHUNK_SIZE = 4800` chars on paragraph b
 `pipeline/narrate.py` uses a custom `mistune.BaseRenderer` subclass. Level-1 headings are stripped (replaced by the intro template). Level-2 headings become spoken transitions (`"Next up: ..."`). Tables, images, code blocks, and HTML are silently dropped. Link text is kept, URLs are dropped.
 
 ### TTS — No Paid Key Required
-Both providers use only `GITHUB_TOKEN`:
+Both providers are free with no auth:
 
-- **Primary: `edge-tts`** — free, no auth, `en-US-AriaNeural` voice.
-- **Fallback: OpenAI TTS via GitHub Models** — `GITHUB_TOKEN` as API key, endpoint `https://models.inference.ai.azure.com`, model `tts-1-hd`, voice `alloy`.
+- **Primary: `edge-tts`** — free, no auth, `en-US-AriaNeural` voice. Requires `edge-tts>=7.2.7` (7.0.x returns 403 from Microsoft's endpoint).
+- **Fallback: `gTTS`** — Google TTS, free, no auth, no API key. Automatically used if edge-tts fails.
 
-The fallback is all-or-nothing — if edge-tts fails mid-synthesis, the entire script is re-synthesised by the fallback, not stitched.
+> **Note:** GitHub Models does not offer TTS endpoints (only chat models). The `openai` package is kept as a dependency for the research summarisation step only.
