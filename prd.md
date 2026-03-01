@@ -113,7 +113,7 @@ Experienced developers who already use AI-assisted tooling (for example GitHub C
 ### FR-6: Text-to-Speech and Fallback
 1. Generate `radar.mp3` from narration script.
 2. Primary provider: `edge-tts`.
-3. Fallback provider: OpenAI TTS through GitHub Models using `GITHUB_TOKEN`.
+3. Fallback provider: gTTS (Google TTS, free, no auth required).
 4. If primary fails, fallback is attempted automatically in the same run.
 
 ### FR-7: Episode Metadata and Feed Update
@@ -164,7 +164,7 @@ Experienced developers who already use AI-assisted tooling (for example GitHub C
 1. Discover repositories from configured topics and time window.
 2. Score, classify, and select top 5.
 3. Run weekly change research and produce markdown briefing.
-4. Convert briefing to narration script.
+4. Convert briefing to narration script via AI editorial synthesis (or mechanical narration renderer as fallback).
 5. Generate audio with primary/fallback TTS.
 6. Publish or stage episode metadata.
 7. Prepend deduped episode in `podcast.xml`.
@@ -217,7 +217,8 @@ Experienced developers who already use AI-assisted tooling (for example GitHub C
 
 ## Implementation Mapping (Current Code Layout)
 1. `main.py` orchestrates full pipeline and mode selection.
-2. `narrate.py` converts markdown into narration-ready script.
-3. `tts.py` handles primary and fallback TTS synthesis.
-4. `podcast.py` writes deduped RSS updates.
-5. `update-radar.yml` automates execution and publication.
+2. `editorial.py` uses GPT-4o to synthesise a cohesive spoken script from all research results (enabled by default; falls back to `narrate.py` when disabled or in `--podcast-only` mode).
+3. `narrate.py` converts markdown into narration-ready script (mechanical fallback path).
+4. `tts.py` handles primary (edge-tts) and fallback (gTTS) TTS synthesis.
+5. `feed.py` writes deduped RSS updates.
+6. `update-radar.yml` automates execution and publication.
