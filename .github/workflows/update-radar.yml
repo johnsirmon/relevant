@@ -1,0 +1,63 @@
+name: 🎙️ Update Radar Podcast
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Run mode"
+        required: true
+        default: "full"
+        type: choice
+        options:
+          - full
+          - podcast-only
+          - dry-run
+  schedule:
+    - cron: "0 9 * * 1"  # Every Monday at 9am UTC
+
+permissions:
+  contents: write
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run pipeline
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          case "${{ inputs.mode || 'full' }}" in
+            full)         python -m pipeline.main --podcast ;;
+            podcast-only) python -m pipeline.main --podcast-only ;;
+            dry-run)      python -m pipeline.main --dry-run ;;
+          esac
+
+      - name: Commit artifacts
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md podcast.xml || true
+          git diff --cached --quiet || git commit -m "chore: weekly radar update [skip ci]"
+          git push
+
+      - name: Publish GitHub Release (with MP3)
+        if: ${{ inputs.mode != 'dry-run' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="radar-$(date -u +%Y-%m-%d)"
+          gh release create "$TAG" radar.mp3 \
+            --title "Radar $(date -u +%Y-%m-%d)" \
+            --notes "Weekly Developer Radar episode." \
+            2>/dev/null || \
+          gh release upload "$TAG" radar.mp3 --clobber
