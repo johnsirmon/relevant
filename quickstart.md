@@ -22,6 +22,8 @@ That's it. New episodes appear in your library each week automatically.
 
 > **Alternative:** If you can't find "Add a Show by URL" in Podcasts, try [Overcast](https://overcast.fm) or [Pocket Casts](https://pocketcasts.com) — both support RSS URLs directly in the Add Podcast screen.
 
+> ⚠️ **If you rename or transfer this repo**, the raw URL above will break and all subscribers will lose the feed. To avoid this, set up a stable redirect (e.g. a custom domain or a short URL service pointing at the raw content URL) before renaming. GitHub does not forward raw.githubusercontent.com URLs the way it forwards repo web URLs.
+
 ---
 
 ## Step 2 — Trigger an episode from GitHub Mobile (iPhone)
