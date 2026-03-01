@@ -28,16 +28,18 @@ care about. Stay sharp.
 class _NarrationRenderer(mistune.BaseRenderer):
     """Renders AST nodes as plain prose suitable for TTS."""
 
+    def _children(self, token, state) -> str:
+        return self.render_tokens(token.get('children', []), state)
+
     def text(self, token, state):
-        return token["raw"]
+        return token.get('raw', '')
 
     def paragraph(self, token, state):
-        children = self.render_children(token, state)
-        return children.strip() + "\n\n"
+        return self._children(token, state).strip() + "\n\n"
 
     def heading(self, token, state):
-        children = self.render_children(token, state)
-        level = token["attrs"]["level"]
+        children = self._children(token, state)
+        level = token['attrs']['level']
         if level == 1:
             return ""  # title stripped — replaced by intro template
         if level == 2:
@@ -45,16 +47,13 @@ class _NarrationRenderer(mistune.BaseRenderer):
         return f"{children.strip()}. "
 
     def list(self, token, state):
-        items = self.render_children(token, state)
-        return items
+        return self._children(token, state)
 
     def list_item(self, token, state):
-        children = self.render_children(token, state)
-        return children.strip() + ". "
+        return self._children(token, state).strip() + ". "
 
     def block_quote(self, token, state):
-        children = self.render_children(token, state)
-        return children.strip() + "\n\n"
+        return self._children(token, state).strip() + "\n\n"
 
     def table(self, token, state):
         return ""  # strip tables entirely
@@ -66,21 +65,19 @@ class _NarrationRenderer(mistune.BaseRenderer):
         return ""  # strip code blocks
 
     def codespan(self, token, state):
-        return token["raw"]  # keep inline code as plain text
+        return token.get('raw', '')
 
     def link(self, token, state):
-        # Render link text only — drop URL
-        children = self.render_children(token, state)
-        return children.strip()
+        return self._children(token, state).strip()
 
     def image(self, token, state):
         return ""
 
     def strong(self, token, state):
-        return self.render_children(token, state)
+        return self._children(token, state)
 
     def emphasis(self, token, state):
-        return self.render_children(token, state)
+        return self._children(token, state)
 
     def softlinebreak(self, token, state):
         return " "
@@ -95,6 +92,12 @@ class _NarrationRenderer(mistune.BaseRenderer):
         return ""
 
     def inline_html(self, token, state):
+        return ""
+
+    def block_text(self, token, state):
+        return self._children(token, state)
+
+    def raw_html(self, token, state):
         return ""
 
 

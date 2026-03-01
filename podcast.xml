@@ -7,10 +7,11 @@
     <itunes:author>Developer Radar</itunes:author>
     <itunes:explicit>no</itunes:explicit>
     <item>
-      <title>Weekly Developer Radar — March 01, 2026 [DRY RUN]</title>
+      <title>Weekly Developer Radar — March 01, 2026</title>
       <guid isPermaLink="false">radar-9e3616bea9d7</guid>
-      <pubDate>Sun, 01 Mar 2026 19:21:17 +0000</pubDate>
-      <enclosure url="https://example.invalid/weekly-radar/radar-9e3616bea9d7.mp3" length="0" type="audio/mpeg" />
+      <pubDate>Sun, 01 Mar 2026 19:36:02 +0000</pubDate>
+      <enclosure url="https://github.com/johnsirmon/relevant/releases/download/radar-2026-03-01/radar.mp3" length="3121148" type="audio/mpeg" />
+      <itunes:duration>8:40</itunes:duration>
       <itunes:explicit>no</itunes:explicit>
     </item>
   </channel>

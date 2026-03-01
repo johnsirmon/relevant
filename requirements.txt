@@ -9,7 +9,8 @@ tenacity==9.0.0
 mistune==3.0.2
 
 # TTS
-edge-tts==7.0.2
+edge-tts>=7.2.7
+gTTS>=2.5.0
 openai==1.68.2
 
 # Audio

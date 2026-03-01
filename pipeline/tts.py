@@ -1,21 +1,17 @@
-"""TTS synthesis: edge-tts primary, OpenAI via GitHub Models fallback."""
+"""TTS synthesis: edge-tts primary, gTTS fallback."""
 import asyncio
 import logging
-import os
 import subprocess
 import tempfile
 from pathlib import Path
 
 import mutagen.mp3
-from openai import OpenAI
+from gtts import gTTS
 
 log = logging.getLogger(__name__)
 
 _OUTPUT = Path("radar.mp3")
 _EDGE_VOICE = "en-US-AriaNeural"
-_OPENAI_VOICE = "alloy"
-_OPENAI_MODEL = "tts-1-hd"
-_OPENAI_BASE_URL = "https://models.inference.ai.azure.com"
 
 # Max chars edge-tts handles reliably in one shot
 _CHUNK_SIZE = 4800
@@ -74,23 +70,17 @@ def _concat_mp3(parts: list[str], output: Path) -> None:
     Path(lst_path).unlink(missing_ok=True)
 
 
-def _synthesise_openai(script: str, output: Path) -> None:
-    """Synthesise via OpenAI TTS through GitHub Models."""
-    log.info("OpenAI TTS fallback: synthesising %d chars", len(script))
-    client = OpenAI(base_url=_OPENAI_BASE_URL, api_key=os.environ["GITHUB_TOKEN"])
-
-    # OpenAI TTS has a 4096-char limit per request — chunk and concatenate
+def _synthesise_gtts(script: str, output: Path) -> None:
+    """Synthesise via gTTS (Google TTS, free, no auth)."""
+    log.info("gTTS fallback: synthesising %d chars", len(script))
     chunks = _split_script(script)
     with tempfile.TemporaryDirectory() as tmp:
         parts = []
         for i, chunk in enumerate(chunks):
             part = Path(tmp) / f"part_{i:04d}.mp3"
-            response = client.audio.speech.create(
-                model=_OPENAI_MODEL, voice=_OPENAI_VOICE, input=chunk
-            )
-            part.write_bytes(response.content)
+            tts = gTTS(text=chunk, lang="en", slow=False)
+            tts.save(str(part))
             parts.append(str(part))
-
         if len(parts) == 1:
             Path(parts[0]).rename(output)
         else:
@@ -141,9 +131,9 @@ def synthesise(
         _synthesise_edge(script, output)
         log.info("edge-tts synthesis complete: %s", output)
     except Exception as exc:
-        log.warning("edge-tts failed (%s), trying OpenAI fallback", exc)
-        _synthesise_openai(script, output)
-        log.info("OpenAI TTS synthesis complete: %s", output)
+        log.warning("edge-tts failed (%s), trying gTTS fallback", exc)
+        _synthesise_gtts(script, output)
+        log.info("gTTS synthesis complete: %s", output)
 
     duration = get_duration_seconds(output)
     log.info("Audio duration: %ds (%.1f min)", duration, duration / 60)
