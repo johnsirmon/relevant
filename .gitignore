@@ -1,0 +1,10 @@
+# Research cache (ephemeral; managed by actions/cache in CI)
+.cache/
+
+# Generated artifacts
+radar.mp3
+
+# Python
+__pycache__/
+*.py[cod]
+.env

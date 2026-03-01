@@ -32,6 +32,17 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Set week key
+        id: week
+        run: echo "week=$(date -u +%Y-W%W)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache research results
+        uses: actions/cache@v4
+        with:
+          path: .cache/research
+          key: research-${{ steps.week.outputs.week }}
+          restore-keys: research-
+
       - name: Run pipeline
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

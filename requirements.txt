@@ -1,0 +1,25 @@
+# GitHub API
+PyGithub==2.5.0
+
+# HTTP / retries
+requests==2.32.3
+tenacity==9.0.0
+
+# Markdown parsing
+mistune==3.0.2
+
+# TTS
+edge-tts==7.0.2
+openai==1.68.2
+
+# Audio
+mutagen==1.47.0
+pydub==0.25.1
+
+# RSS / XML
+lxml==5.3.1
+
+# Config / dates
+PyYAML==6.0.2
+python-dateutil==2.9.0
+python-dotenv==1.0.1
