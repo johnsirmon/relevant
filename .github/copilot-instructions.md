@@ -36,10 +36,27 @@ Specific fix or improvement
 
 Use `LRN-`, `ERR-`, or `FEAT-` prefix. Date + 3-char suffix (e.g. `LRN-20260301-A1B`).
 
+### Logging entries
+
+Use the `log-learning` skill or the helper script for schema-safe entries:
+```bash
+python scripts/log_learning.py --help
+```
+
 ### Promoting to instructions
 
 High-value learnings auto-promote to this file via the **🧠 Self-Improve** GitHub Actions workflow.  
 Trigger it from the Actions tab (or it runs automatically when `.learnings/` files change).
+
+## Pre-flight (local runs only)
+
+```bash
+ffmpeg -version              # must be on PATH; winget installs to AppData — open new shell or set $env:PATH
+gh auth status               # must show 'Logged in to github.com'
+echo $env:GITHUB_REPOSITORY  # must be set (e.g. johnsirmon/relevant) — NOT auto-set locally
+echo $env:GITHUB_TOKEN       # set via: $env:GITHUB_TOKEN = (gh auth token)
+pip show edge-tts            # must be >=7.2.7
+```
 
 ## Commands
 
@@ -123,8 +140,10 @@ All weights, thresholds, and topic list live in `pipeline/config.yaml`. Use `con
 ### GUID Strategy
 GUIDs are deterministic: `"radar-" + sha1(YYYY-MM-DD)[:12]`. Same date always produces the same GUID, which is how idempotency works — the pipeline checks the existing feed for the current day's GUID at startup and exits early if found.
 
+> **Gotcha:** `--dry-run` and `--podcast` share the same daily GUID. Running dry-run first will block the real pipeline until the dry-run entry is removed from `podcast.xml`.
+
 ### Research Cache
-`pipeline/research.py` caches raw GitHub API + GPT-4o responses to `.cache/research/<owner>__<repo>__<YYYY-WW>.json`. The cache key is the ISO week number. In CI, `actions/cache` preserves this across re-runs within the same week. Locally the files persist on disk.
+`pipeline/research.py` caches raw GitHub API + GPT-4o responses to `.cache/research/<owner>__<repo>__<YYYY-WW>.json`. The cache key is the ISO week number. In CI, `actions/cache` preserves this across re-runs within the same week. Locally the files persist on disk. To force fresh data, delete files whose `YYYY-WW` suffix doesn't match the current week.
 
 ### TTS Chunking
 Both TTS providers chunk the script at `_CHUNK_SIZE = 4800` chars on paragraph boundaries and concatenate via `ffmpeg -f concat`. Do not pass the full script as a single string — providers have input limits.
@@ -141,6 +160,11 @@ Both TTS providers chunk the script at `_CHUNK_SIZE = 4800` chars on paragraph b
 ### Narration Rendering
 `pipeline/narrate.py` uses a custom `mistune.BaseRenderer` subclass. Level-1 headings are stripped (replaced by the intro template). Level-2 headings become spoken transitions (`"Next up: ..."`). Tables, images, code blocks, and HTML are silently dropped. Link text is kept, URLs are dropped.
 
+**mistune 3.x quirks** (incompatible with 2.x patterns):
+- No `render_children()` — use `self.render_tokens(token.get('children', []), state)` instead
+- `block_text` token type wraps inline content inside list items — must be handled explicitly
+- Use `token.get('raw', '')` defensively
+
 ### TTS — No Paid Key Required
 Both providers are free with no auth:
 
@@ -148,3 +172,9 @@ Both providers are free with no auth:
 - **Fallback: `gTTS`** — Google TTS, free, no auth, no API key. Automatically used if edge-tts fails.
 
 > **Note:** GitHub Models does not offer TTS endpoints (only chat models). The `openai` package is kept as a dependency for the research summarisation step only.
+
+## Known Issues
+
+- **`--dry-run` scope**: Only updates the feed with a placeholder. It does NOT test discover, research, briefing, narrate, or TTS stages.
+- **Double-publish risk**: The CI workflow (`update-radar.yml`) and `pipeline/main.py` both call `gh release create`. Never trigger both manually in the same run.
+- **`agent/` at repo root is empty**: The canonical agent location is `.github/agents/`.
