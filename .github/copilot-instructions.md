@@ -58,37 +58,42 @@ PUBLISH_PODCAST=1 python -m pipeline.main   # env var equivalent of --podcast
 
 **Weekly Developer Radar Podcast** — a Python pipeline that discovers fast-rising open-source repositories weekly, generates a written briefing, converts it to a narration script, synthesizes audio via TTS, and publishes episodes to an RSS feed with GitHub Release-hosted MP3s.
 
-> This repository is in early setup. Code has not yet been written. The authoritative spec is `prd.md`.
-
-## Planned Architecture
+## Architecture
 
 The pipeline runs as `python -m pipeline.main` and is orchestrated by `.github/workflows/update-radar.yml`.
 
 ### Module Responsibilities
 
-| File | Role |
-|------|------|
-| `main.py` | Top-level orchestrator; reads mode flags and runs pipeline stages in order |
-| `narrate.py` | Converts `README.md` (markdown briefing) into a spoken narration script |
-| `tts.py` | Text-to-speech synthesis; primary: `edge-tts` (free, no auth), fallback: OpenAI TTS via GitHub Models using `GITHUB_TOKEN` (no paid key needed) |
-| `podcast.py` | Writes deduped RSS 2.0 + iTunes updates to `podcast.xml` |
-| `update-radar.yml` | GitHub Actions workflow; commits artifacts and creates/updates dated GitHub Release |
+| Module | Role |
+|--------|------|
+| `pipeline/main.py` | Orchestrator; wires all stages, parses CLI flags, enforces correct stage order |
+| `pipeline/config.py` | Loads `pipeline/config.yaml`; env vars prefixed `RADAR_` override individual keys (dot-path with `__` separator, e.g. `RADAR_WEIGHTS__GROWTH=0.40`) |
+| `pipeline/models.py` | Shared dataclasses: `RepoScore`, `ResearchResult`, `EpisodeRecord` |
+| `pipeline/discover.py` | PyGithub search by topic, weighted scoring, top-5 selection |
+| `pipeline/research.py` | Per-repo activity fetch + GPT-4o summarisation via GitHub Models; results cached to `.cache/research/` |
+| `pipeline/briefing.py` | Assembles `README.md` from `ResearchResult` list |
+| `pipeline/narrate.py` | mistune AST renderer — strips tables/TOC/links, injects consistent intro + outro |
+| `pipeline/tts.py` | edge-tts primary → OpenAI TTS fallback; mutagen duration check; optional ffmpeg tempo adjust |
+| `pipeline/feed.py` | RSS 2.0 + iTunes `podcast.xml` updates with guid-based dedup and XML validation |
 
 ### Core Artifacts
 
-- `README.md` — weekly markdown briefing (research output)
-- `radar.mp3` — generated audio episode
-- `podcast.xml` — RSS 2.0 feed with iTunes tags
+- `README.md` — weekly markdown briefing (committed)
+- `podcast.xml` — RSS 2.0 feed with iTunes tags (committed)
+- `radar.mp3` — generated audio episode (`.gitignore`d; hosted via GitHub Release)
+- `.cache/research/` — week-keyed API response cache (`.gitignore`d; managed by `actions/cache`)
 
-### Pipeline Stages (in order)
+### Pipeline Stage Order
 
-1. Discover repositories from configured topics over last 7 days
-2. Score/classify candidates; select top 5
-3. Run change-research agent; output markdown briefing to `README.md`
-4. `narrate.py` → narration script
-5. `tts.py` → `radar.mp3` (primary `edge-tts`, auto-fallback to OpenAI TTS)
-6. `podcast.py` → prepend deduped episode to `podcast.xml`
-7. Workflow commits artifacts and publishes GitHub Release
+**Critical: release upload must happen before feed update** — `mp3_url` and `file_size_bytes` are only known post-upload.
+
+1. `discover` — search GitHub by topic, score candidates, select top 5
+2. `research` — fetch commits/PRs/releases per repo, summarise with GPT-4o
+3. `briefing` — write `README.md`
+4. `narrate` — convert `README.md` to spoken script
+5. `tts` — synthesise `radar.mp3`
+6. **publish release** — `gh release create/upload`, capture final URL + size
+7. `feed` — prepend deduped episode to `podcast.xml`
 
 ## Execution Modes
 
@@ -100,40 +105,40 @@ The pipeline runs as `python -m pipeline.main` and is orchestrated by `.github/w
 
 ## Key Conventions
 
-### Ranking Model
-- Four indicator categories with configurable weights: **Growth Momentum (35%)**, **Maintenance Health (25%)**, **Engineering Quality (20%)**, **Adoption Signals (20%)**.
-- Weights and classification thresholds are externally configurable — do not hard-code them.
-- Each analyzed repo must emit both a numeric score and a status class label: `Rising & Healthy`, `Mature & Stable`, `Hype-Driven`, `Niche but Strong`, or `At Risk`.
+### Config Loading
+All weights, thresholds, and topic list live in `pipeline/config.yaml`. Use `config.get("weights.growth")` for dot-path lookups. Override any value at runtime with `RADAR_<KEY__SUBKEY>=value` env vars — never hard-code scoring values in module code.
 
-### Episode Record Schema
-Every episode entry written to `podcast.xml` must include: `title`, `guid`, `pub_date` (RFC 2822), `mp3_url` (absolute), `file_size_bytes`.  
-Deduplication is by `guid` — never insert a duplicate.
+### Scoring and Classification
+- Repos are sorted by `updated` date first (not raw stars) to surface fast-rising repos, then re-ranked by weighted score.
+- Four indicator categories: **Growth (35%)**, **Health (25%)**, **Quality (20%)**, **Adoption (20%)**.
+- Status labels (all five must be emitted, never add new ones): `Rising & Healthy`, `Mature & Stable`, `Hype-Driven`, `Niche but Strong`, `At Risk`.
+- Classification thresholds are in `config.yaml` under `thresholds` — read them via `config.all_config()["thresholds"]`.
 
-### Episode Duration Target
-Audio runtime target is **60 ± 5 minutes**. Script length heuristics may be used during generation, but the pipeline's pass/fail check uses actual audio runtime.
+### GUID Strategy
+GUIDs are deterministic: `"radar-" + sha1(YYYY-MM-DD)[:12]`. Same date always produces the same GUID, which is how idempotency works — the pipeline checks the existing feed for the current day's GUID at startup and exits early if found.
+
+### Research Cache
+`pipeline/research.py` caches raw GitHub API + GPT-4o responses to `.cache/research/<owner>__<repo>__<YYYY-WW>.json`. The cache key is the ISO week number. In CI, `actions/cache` preserves this across re-runs within the same week. Locally the files persist on disk.
+
+### TTS Chunking
+Both TTS providers chunk the script at `_CHUNK_SIZE = 4800` chars on paragraph boundaries and concatenate via `ffmpeg -f concat`. Do not pass the full script as a single string — providers have input limits.
+
+### Episode Duration
+`mutagen.mp3.MP3` measures actual audio duration. Targets: 55–65 minutes (configurable via `episode.target_duration_min/max` in `config.yaml`). Duration failures log a warning but do not abort the pipeline. The `--auto-adjust-duration` flag triggers a single ffmpeg `atempo` pass (clamped to ±10%).
+
+### Feed Update Rules
+- `feed.py` loads existing `podcast.xml` before writing — never replace the file from scratch.
+- Dedup by `guid` (checked via `load_existing_guids()` before running TTS).
+- `EpisodeRecord.mp3_url` must be the real GitHub Release asset URL, not a placeholder, in non-dry-run mode.
+- Dry-run placeholder URL format: `https://example.invalid/weekly-radar/{guid}.mp3`
+
+### Narration Rendering
+`pipeline/narrate.py` uses a custom `mistune.BaseRenderer` subclass. Level-1 headings are stripped (replaced by the intro template). Level-2 headings become spoken transitions (`"Next up: ..."`). Tables, images, code blocks, and HTML are silently dropped. Link text is kept, URLs are dropped.
 
 ### TTS — No Paid Key Required
-Both TTS providers require zero paid credentials:
+Both providers use only `GITHUB_TOKEN`:
 
-- **Primary: `edge-tts`** — free, no auth, runs locally via the `edge-tts` Python package.
-- **Fallback: OpenAI TTS via GitHub Models** — uses the auto-injected `GITHUB_TOKEN` from GitHub Actions. No OpenAI account or billing required. Endpoint: `https://models.inference.ai.azure.com`, OpenAI-compatible SDK.
+- **Primary: `edge-tts`** — free, no auth, `en-US-AriaNeural` voice.
+- **Fallback: OpenAI TTS via GitHub Models** — `GITHUB_TOKEN` as API key, endpoint `https://models.inference.ai.azure.com`, model `tts-1-hd`, voice `alloy`.
 
-```python
-from openai import OpenAI
-client = OpenAI(
-    base_url="https://models.inference.ai.azure.com",
-    api_key=os.environ["GITHUB_TOKEN"],
-)
-response = client.audio.speech.create(model="tts-1-hd", voice="alloy", input=script)
-```
-
-`tts.py` must automatically attempt the fallback if `edge-tts` fails. Never require a separately managed API key.
-
-### Dry-Run Placeholder URLs
-Dry-run must still write a valid episode to `podcast.xml` with a deterministic, clearly-marked non-production placeholder URL. Real TTS is not called.
-
-### Idempotency
-The pipeline must be idempotent: re-running on the same input window should not produce duplicate feed entries or duplicate GitHub Releases.
-
-### Narration Script Rules
-`narrate.py` must strip visual-only markdown (tables, TOC, link metadata) and preserve story-flow. A consistent intro and outro template must be present in every episode.
+The fallback is all-or-nothing — if edge-tts fails mid-synthesis, the entire script is re-synthesised by the fallback, not stitched.

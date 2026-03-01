@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='utf-8'?>
+<rss xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" version="2.0">
+  <channel>
+    <title>Weekly Developer Radar</title>
+    <description>A weekly intelligence briefing on fast-rising AI agent tooling, GitHub Copilot, and developer workflows.</description>
+    <language>en-us</language>
+    <itunes:author>Developer Radar</itunes:author>
+    <itunes:explicit>no</itunes:explicit>
+    <item>
+      <title>Weekly Developer Radar — March 01, 2026 [DRY RUN]</title>
+      <guid isPermaLink="false">radar-9e3616bea9d7</guid>
+      <pubDate>Sun, 01 Mar 2026 19:21:17 +0000</pubDate>
+      <enclosure url="https://example.invalid/weekly-radar/radar-9e3616bea9d7.mp3" length="0" type="audio/mpeg" />
+      <itunes:explicit>no</itunes:explicit>
+    </item>
+  </channel>
+</rss>

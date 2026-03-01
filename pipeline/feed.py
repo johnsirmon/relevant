@@ -19,10 +19,8 @@ ET.register_namespace("atom", _ATOM_NS)
 
 def _make_empty_feed() -> ET.Element:
     cfg = config.all_config()["podcast"]
-    rss = ET.Element("rss", version="2.0", attrib={
-        "xmlns:itunes": _ITUNES_NS,
-        "xmlns:atom": _ATOM_NS,
-    })
+    # ET.register_namespace handles xmlns injection; don't set them as explicit attribs
+    rss = ET.Element("rss", attrib={"version": "2.0"})
     channel = ET.SubElement(rss, "channel")
     ET.SubElement(channel, "title").text = cfg["title"]
     ET.SubElement(channel, "description").text = cfg["description"]
