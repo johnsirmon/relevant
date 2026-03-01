@@ -8,7 +8,7 @@ Usage:
 
 Env vars:
     PUBLISH_PODCAST=1   equivalent to --podcast
-    GITHUB_TOKEN        required for GitHub API and OpenAI fallback TTS
+    GITHUB_TOKEN        required for GitHub API and research summarisation
 """
 import argparse
 import hashlib

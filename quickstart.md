@@ -54,7 +54,7 @@ GitHub Actions (Monday 9am UTC, or manual)
   Discover repos → Research → Write README.md
         │
         ▼
-  Narrate → TTS (audio) → GitHub Release (MP3)
+  Editorial (AI script) → TTS (audio) → GitHub Release (MP3)
         │
         ▼
   Update podcast.xml  ←── committed to this repo
